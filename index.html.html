@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>7 Days to Die 撃破回数計算機 - 妨害ギフト検討用</title>
+<!-- Firebase SDK (オプション。コメント共有機能を有効にする場合のみ使用) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #e8e8e8;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  h1 {
+    text-align: center;
+    color: #ff6b35;
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+    margin: 8px 0 4px;
+    font-size: 1.5em;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 0.85em;
+    margin-bottom: 16px;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .panel {
+    background: rgba(30, 35, 55, 0.85);
+    border: 1px solid #2a3050;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .panel h2 {
+    margin: 0 0 16px -18px;
+    padding: 10px 14px 10px 22px;
+    font-size: 1.35em;
+    color: #fff;
+    background: linear-gradient(90deg, rgba(255,107,53,0.35) 0%, rgba(255,107,53,0.05) 70%, transparent 100%);
+    border-left: 6px solid #ff6b35;
+    border-radius: 0 8px 8px 0;
+    width: calc(100% + 18px);
+    box-sizing: border-box;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 8px rgba(255,107,53,0.3);
+  }
+  .panel h2 .sub {
+    color: #aac;
+    font-size: 0.7em;
+    font-weight: normal;
+    margin-left: 8px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 700px) {
+    .row { grid-template-columns: 1fr; }
+  }
+  label {
+    display: block;
+    font-size: 0.85em;
+    color: #aac;
+    margin-bottom: 4px;
+    margin-top: 8px;
+  }
+  select, input[type=number] {
+    width: 100%;
+    padding: 8px;
+    background: #2a3050;
+    border: 1px solid #3a4070;
+    border-radius: 5px;
+    color: #e8e8e8;
+    font-size: 0.95em;
+  }
+  select:focus, input:focus {
+    outline: none;
+    border-color: #ff6b35;
+  }
+  .checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(20, 25, 40, 0.5);
+    border-radius: 5px;
+  }
+  .checkbox-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.85em;
+  }
+  input[type=checkbox] { accent-color: #ff6b35; cursor: pointer; }
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+  .result-table th {
+    background: #2a3050;
+    color: #ffa500;
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 2px solid #ff6b35;
+    font-weight: 600;
+    font-size: 0.8em;
+  }
+  .result-table td {
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 1px solid #2a3050;
+  }
+  .result-table tr:hover { background: rgba(255, 107, 53, 0.05); }
+  .variant-name {
+    text-align: left !important;
+    font-weight: 600;
+    color: #fff;
+    padding-left: 12px !important;
+  }
+  .hits-cell {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #ff6b35;
+  }
+  .hits-cell.regen-warn { color: #ff4444; font-size: 0.85em; }
+  .hits-cell.weak { color: #4dd2ff; }
+  .badge {
+    display: inline-block;
+    background: #ff6b35;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7em;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .info-box {
+    background: rgba(255, 165, 0, 0.08);
+    border-left: 3px solid #ffa500;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.82em;
+    color: #ccc;
+    margin-top: 10px;
+  }
+  .info-box b { color: #ffa500; }
+  .stat-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.85em;
+    color: #ccc;
+    border-bottom: 1px dashed #2a3050;
+  }
+  .stat-line .v { color: #4dd2ff; font-weight: 600; }
+  .gift-builder {
+    background: rgba(50, 30, 60, 0.5);
+    border: 1px solid #6a3070;
+  }
+  .gift-builder h2 {
+    background: linear-gradient(90deg, rgba(200,112,255,0.35) 0%, rgba(200,112,255,0.05) 70%, transparent 100%);
+    border-left-color: #c870ff;
+    text-shadow: 0 0 8px rgba(200,112,255,0.3);
+  }
+  .gift-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .gift-item {
+    background: #2a2040;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    color: #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .gift-item button {
+    background: #ff4466;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+  }
+  .btn {
+    background: linear-gradient(135deg, #ff6b35, #ff8a35);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 8px;
+    font-size: 0.9em;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,107,53,0.3); }
+  .btn-purple { background: linear-gradient(135deg, #c870ff, #8a5aff); }
+  .footer {
+    text-align: center;
+    color: #555;
+    font-size: 0.7em;
+    margin-top: 20px;
+  }
+  .empty-msg {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+  }
+  details summary {
+    cursor: pointer;
+    color: #ffa500;
+    padding: 6px;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🧟 7 Days to Die 撃破回数計算機</h1>
+  <div class="subtitle">妨害配信ギフト表検討ツール｜データ参照：ゲーム内XML(entityclasses.xml) + STE準拠英語名</div>
+
+  <div class="panel">
+    <h2>⚔️ 武器選択</h2>
+    <div class="row">
+      <div>
+        <label>武器カテゴリ</label>
+        <select id="weaponCategory"></select>
+      </div>
+      <div>
+        <label>武器</label>
+        <select id="weaponType"></select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>弾薬 / バリエーション</label>
+        <select id="weaponAmmo"></select>
+      </div>
+      <div>
+        <label>➕ 追加ボーナス %（MOD/特殊技能用・オプション）</label>
+        <input type="number" id="totalBoost" value="0" min="0" max="200" step="5">
+      </div>
+    </div>
+    <div class="info-box" style="font-size:0.78em;margin-top:6px;">
+      <b>品質1〜6は結果テーブルで自動表示</b>します（Q1=+0%, Q6=+50%）。<br>
+      追加ボーナスは「MOD装着分（1個+10%）」「Pummel Pete等の技能Lv分」を足して入力してください。
+    </div>
+    <div class="row">
+      <div>
+        <label>命中部位（ダメージ倍率）</label>
+        <select id="hitLocation">
+          <option value="1.0" selected>胴体 (×1.0)</option>
+          <option value="0.55">適当に殴る (×0.55)</option>
+          <option value="0.4">腕/脚 (×0.4)</option>
+          <option value="head">頭部HS (武器別倍率)</option>
+        </select>
+      </div>
+      <div>
+        <label>近接HS倍率 (頭部選択時のみ)</label>
+        <input type="number" id="meleeHsMult" value="2.0" min="1" max="5" step="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>🎮 ダメージ補正（オプション）</label>
+        <select id="difficulty">
+          <option value="1.0" selected>×1.0（補正なし／武器表示通り）</option>
+          <option value="1.5">×1.5（任意の追加倍率）</option>
+          <option value="2.0">×2.0</option>
+          <option value="0.7">×0.7</option>
+          <option value="0.5">×0.5</option>
+        </select>
+      </div>
+      <div>
+        <label>カスタム倍率</label>
+        <input type="number" id="customDiff" value="1.0" min="0.1" max="3.0" step="0.05" disabled style="background:#1a1a2e;">
+      </div>
+    </div>
+    <div class="info-box" style="font-size:0.78em;margin-top:6px;">
+      <b>📌 重要：</b>武器に表示される攻撃力（Q3 鉄鋼こん棒 40.2 等）は<b>既に難易度補正込み</b>の可能性が高いです。<br>
+      実測ベース：Q3=40.2 のこん棒で放射能ナース胴体13発→ HP約 451 がピッタリ（補正×1.0）。<br>
+      もし計算が実測と合わない場合のみ、ここを調整してください。
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="powerAttack"> パワーアタック</label>
+      <label><input type="checkbox" id="sneakAttack"> 奇襲攻撃</label>
+      <label><input type="checkbox" id="downedBonus"> ダウン中の頭当たりやすさ補正(×1.5)</label>
+      <label style="display:none;"><input type="checkbox" id="modBonus"></label>
+      <label style="display:none;"><input type="checkbox" id="perkBonus"></label>
+      <label style="display:none;"><input type="number" id="qualityBonus" value="0"></label>
+    </div>
+    <div id="weaponInfo" class="info-box"></div>
+    <div class="info-box" style="margin-top:8px;">
+      <b>🎯 命中部位の違い：</b><br>
+      ・<b>胴体 (×1.0)</b>: 武器の基礎値そのまま<br>
+      ・<b>適当に殴る (×0.55)</b>: 頭・胴・腕・脚にバラけて当たる平均<br>
+      ・<b>腕/脚 (×0.4)</b>: 細い部位のみ命中<br>
+      ・<b>頭部HS</b>: 倍率指定可（ステルス・狙撃用）<br>
+      <br>
+      <b>🔄 ダウン中の補正：</b>転倒中は頭が露出してHS率UP。スカルクラッシャー等のパークで追加ダメージあり。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>🎯 ターゲット選択</h2>
+    <div class="row">
+      <div>
+        <label>カテゴリ</label>
+        <select id="targetCategory"></select>
+      </div>
+      <div>
+        <label>ターゲット</label>
+        <select id="targetType"></select>
+      </div>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="considerRegen"> 自動回復を考慮</label>
+      <label><input type="checkbox" id="considerArmor" checked style="display:none;"> <span style="display:none;">armor</span></label>
+      <label><input type="checkbox" id="nightMode"> 夜モード（参考表示）</label>
+    </div>
+    <div class="info-box" style="font-size:0.75em;margin-top:6px;">
+      🛡️マーク付きゾンビ(バイカー/作業員/兵士/解体)はアーマー持ちで通常より多めに殴る必要があります（計算式は近似値）。
+    </div>
+    <div id="targetInfo" class="info-box"></div>
+  </div>
+
+  <div class="panel">
+    <h2>📊 撃破回数（バリエーション × 武器品質）</h2>
+    <div style="overflow-x:auto;">
+    <table class="result-table" style="min-width:800px;">
+      <thead>
+        <tr>
+          <th rowspan="2">個体タイプ<br><span style="font-size:0.75em;color:#888;font-weight:normal;">🎁ギフトID</span></th>
+          <th rowspan="2">HP<br><span style="font-size:0.75em;color:#888;font-weight:normal;">±15%</span></th>
+          <th rowspan="2">回復</th>
+          <th colspan="6" style="background:#3a2050;">武器品質別 必要攻撃回数（±15%個体差込み）</th>
+          <th rowspan="2">備考</th>
+        </tr>
+        <tr>
+          <th style="background:#1a1a2e;">Q1<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+0%</span></th>
+          <th style="background:#1a1a2e;">Q2<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+10%</span></th>
+          <th style="background:#1a1a2e;">Q3<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+20%</span></th>
+          <th style="background:#1a1a2e;">Q4<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+30%</span></th>
+          <th style="background:#1a1a2e;">Q5<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+40%</span></th>
+          <th style="background:#1a1a2e;">Q6<br><span style="font-size:0.7em;color:#888;font-weight:normal;">+50%</span></th>
+        </tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+    </div>
+    <div class="info-box">
+      <b>📊 表の読み方：</b>各セルは「武器個体差±15% × ゾンビHP個体差±15%」を考慮した最少〜最多発数<br>
+      <b>🎯 品質1〜6の差：</b>Q1=基礎値, Q2=+10%, Q3=+20%, Q4=+30%, Q5=+40%, Q6=+50%
+    </div>
+  </div>
+
+  <!-- コメント欄パネル -->
+  <div class="panel" id="commentPanel">
+    <h2>💬 このゾンビについての配信お役立ちメモ <span id="commentZombieName" class="sub"></span></h2>
+    <div style="font-size:0.78em;color:#888;font-style:italic;margin-bottom:10px;padding:6px 10px;background:rgba(20,25,40,0.4);border-radius:5px;">
+      <span style="color:#aac;">📝 例：</span>「このゾンビは動きが派手なのでおもしろい」「リアクション取りやすい」「自爆の瞬間が映える」など、配信視点のメモを残せます
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="commentName" placeholder="お名前(8文字まで)" maxlength="8" style="flex:0 0 120px;padding:6px;background:#2a3050;border:1px solid #3a4070;border-radius:5px;color:#e8e8e8;">
+      <input type="text" id="commentText" placeholder="例：動きが派手で面白い / 自爆が見せ場 など" style="flex:1;min-width:180px;padding:6px;background:#2a3050;border:1px solid #3a4070;border-radius:5px;color:#e8e8e8;">
+      <button onclick="addComment()" style="background:linear-gradient(135deg,#ff6b35,#ff8a35);color:white;border:none;padding:6px 14px;border-radius:5px;cursor:pointer;font-weight:600;">投稿</button>
+    </div>
+    <div id="commentList"></div>
+    <button id="toggleComments" onclick="toggleAllComments()" style="display:none;margin-top:6px;background:#2a3050;color:#ffa500;border:1px solid #ff6b35;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;">▼ 全て表示</button>
+  </div>
+
+  <div class="panel gift-builder">
+    <h2>🎁 ギフト表ビルダー（妨害配信用）</h2>
+    <div class="row">
+      <button class="btn btn-purple" onclick="addCurrentToGift()">現在の武器をギフトに追加</button>
+      <button class="btn btn-purple" onclick="addCurrentTargetToGift()">現在のターゲットをギフトに追加</button>
+    </div>
+    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">武器ギフト候補</h3>
+    <div id="weaponGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
+    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">ターゲットギフト候補</h3>
+    <div id="targetGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
+    <button class="btn" onclick="exportGiftTable()" style="margin-top:12px;">📋 Discord貼り付け用テキストを出力</button>
+    <textarea id="exportArea" style="display:none;width:100%;height:200px;margin-top:10px;background:#1a1a2e;color:#eee;padding:8px;border:1px solid #3a4070;border-radius:5px;font-family:monospace;font-size:0.85em;"></textarea>
+  </div>
+
+  <details class="panel">
+    <summary style="cursor:pointer;list-style:none;">
+      <h2 style="margin:0;display:inline-block;width:calc(100% + 18px);">🎯 ゾンビ別 有効武器・立ち回りまとめ <span class="sub">▼ クリックで開閉</span></h2>
+    </summary>
+    <div class="info-box" style="margin-top:16px;margin-bottom:14px;background:rgba(255,165,0,0.12);border-left:4px solid #ffa500;">
+      <b style="color:#ffa500;font-size:1.05em;">📌 武器選びの基本（まずコレを押さえる）</b><br><br>
+      ・<b>🛡️マーク = アーマー持ち</b>（バイカー/作業員/兵士/解体）→ 鉄鋼槍やAP弾で貫通推奨<br>
+      ・<b>動物</b>には鉄鋼ナックル(+170%)/ナイフ(+60%)が圧倒的に強い<br>
+      ・<b>ライフル系HS</b>は追加ダメージ加算（スナイパー +200ダメ）<br>
+      ・<b>絶叫(screamer)</b>は出現したら最優先で消音武器処理（叫ぶ前に倒す）<br>
+      ・<b>デモリッシャー</b>は爆発系絶対NG（誘爆で自爆させちゃう）<br>
+      ・<b>鈍器系</b>は通常ゾンビ万能、ただし鎧持ちには弱体化<br>
+      ・<b>状態異常</b>：おもりMOD=転倒、バーニングシャフト=炎上、ノコギリ=出血で削れる
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="result-table" style="min-width:700px;">
+      <thead>
+        <tr>
+          <th>ゾンビ</th>
+          <th>特徴</th>
+          <th>🟢 おすすめ武器</th>
+          <th>🔴 苦手な武器</th>
+          <th>立ち回りメモ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><b>arlene</b><br>(アーリーン)</td><td>HP低・標準女性ゾンビ</td><td>棍棒系全般・ナイフ</td><td>-</td><td>初心者向け、頭狙い練習相手</td></tr>
+        <tr><td><b>biker 🛡️</b><br>(バイカー)</td><td>アーマー20、HP高め</td><td><b>鉄鋼槍</b>(貫通)・AP弾系</td><td>鈍器・ナックル(弱体化)</td><td>フェラル以上は超強敵、距離取って槍</td></tr>
+        <tr><td><b>boe</b><br>(ボウ)</td><td>足が速い、頭振る</td><td>棍棒・スレッジ</td><td>-</td><td>真っすぐ来るので頭狙いやすい</td></tr>
+        <tr><td><b>bowler</b><br>(ボウラー)</td><td>HP高め、体格大</td><td>スレッジ・斧・スナイパー</td><td>素手・ナックル</td><td>HPあるので火力武器推奨</td></tr>
+        <tr><td><b>burnt</b><br>(焦げたゾンビ)</td><td>攻撃時に炎上付与</td><td>遠距離・銃器</td><td>近接全般</td><td>燃やされたくないので離れて</td></tr>
+        <tr><td><b>business man</b><br>(ビジネスマン)</td><td>標準HP、よくいる</td><td>棍棒・ナイフ</td><td>-</td><td>オフィスでよく見る、雑魚</td></tr>
+        <tr><td><b>chuck</b><br>(投石)</td><td>遠距離投石、スタン付与</td><td>狙撃・棍棒で接近</td><td>-</td><td>投石回避必須、地味に対物高い</td></tr>
+        <tr><td><b>darlene</b><br>(ダーリーン)</td><td>うろうろ動く</td><td>棍棒・ナイフ</td><td>-</td><td>動きに翻弄されない</td></tr>
+        <tr><td><b>demolition 🛡️</b><br>(デモリッシャー)</td><td>HP1000、アーマー60、爆発</td><td><b>スナイパーAP</b>頭一点・ブレードトラップ</td><td><b>爆発物・ショットガン</b>(誘爆)</td><td>胸ボタン絶対回避、頭だけ狙う</td></tr>
+        <tr><td><b>fat</b><br>(ビッグママ)</td><td>HP高、農場系で寝てる</td><td>スレッジ・ショットガン</td><td>低火力近接</td><td>群れに混ざると厄介</td></tr>
+        <tr><td><b>fat cop</b><br>(警官)</td><td>酸液・HP40%で自爆</td><td>遠距離一発で頭飛ばす</td><td>近接全般・爆発物</td><td>必ず遠距離、自爆射程4m以内NG</td></tr>
+        <tr><td><b>fat hawaiian</b><br>(観光客)</td><td>対物高、HP高、序盤注意</td><td>スレッジ・ショットガン</td><td>軽武器</td><td>序盤ホードで拠点壊される</td></tr>
+        <tr><td><b>Hazmat</b><br>(危険物処理班)</td><td>感染カウンター高い</td><td>遠距離推奨</td><td>近接(感染リスク)</td><td>感染中の戦闘は避ける</td></tr>
+        <tr><td><b>inmate</b><br>(囚人)</td><td>標準ゾンビ</td><td>棍棒系</td><td>-</td><td>刑務所系POIで見かける</td></tr>
+        <tr><td><b>janitor</b><br>(用務員)</td><td>標準ゾンビ</td><td>棍棒・ナイフ</td><td>-</td><td>普通の雑魚</td></tr>
+        <tr><td><b>joe</b><br>(ジョー)</td><td>標準男性ゾンビ</td><td>棍棒系</td><td>-</td><td>序盤の定番敵</td></tr>
+        <tr><td><b>Lab</b><br>(研究員)</td><td>標準女性ゾンビ</td><td>棍棒・ナイフ</td><td>-</td><td>研究施設で多い</td></tr>
+        <tr><td><b>lumberjack</b><br>(木こり)</td><td>雪原のデカブツ、HP高</td><td>スレッジ・ライフル</td><td>素手</td><td>雪原で複数来ると厄介</td></tr>
+        <tr><td><b>marlene</b><br>(マーリーン)</td><td>腕で頭隠す</td><td>槍・パワーアタック</td><td>狙撃難</td><td>頭出待ち or 脚スタン</td></tr>
+        <tr><td><b>moe</b><br>(モー)</td><td>太った徘徊者、HP多め</td><td>スレッジ・ショットガン</td><td>-</td><td>動き遅いので狙いやすい</td></tr>
+        <tr><td><b>mutated</b><br>(変異)</td><td>HP超高、酸液範囲攻撃</td><td>背中からスナイパー</td><td>近接全般</td><td>接近危険、地面に酸の跡が残る</td></tr>
+        <tr><td><b>nurse</b><br>(看護師)</td><td>標準女性ゾンビ</td><td>棍棒・ナイフ</td><td>-</td><td>病院系で見かける</td></tr>
+        <tr><td><b>party girl</b><br>(パーティーガール)</td><td>標準女性</td><td>棍棒・ナイフ</td><td>-</td><td>クラブ系で見る</td></tr>
+        <tr><td><b>rancher</b><br>(虫吐き)</td><td>虫の群れを召喚</td><td>近接で虫処理・狙撃</td><td>遠距離単発(虫銃弾耐性)</td><td>虫は棒で叩き落とす</td></tr>
+        <tr><td><b>screamer</b><br>(絶叫)</td><td>低HP・援軍呼ぶ</td><td><b>サイレンサー銃</b>で速攻</td><td>大音量武器</td><td>叫ぶ前に倒すのが最重要</td></tr>
+        <tr><td><b>skateborder</b><br>(悪党)</td><td>HP少し高め</td><td>棍棒・スレッジ</td><td>-</td><td>HPが他より高いので注意</td></tr>
+        <tr><td><b>soldier 🛡️</b><br>(兵士)</td><td>アーマー50、非常にタフ</td><td><b>鉄鋼槍</b>・AP弾系</td><td>鈍器全般</td><td>アーマー貫通必須</td></tr>
+        <tr><td><b>spider</b><br>(スパイダー)</td><td>4足歩行・ジャンプ・低姿勢</td><td>ショットガン・ライフル</td><td>棒(判定外す)</td><td>登場時の悲鳴に注意、罠も低身で通る</td></tr>
+        <tr><td><b>steve</b><br>(スティーブ)</td><td>HD化・腕振り回す</td><td>遠距離・パワーアタック</td><td>判定広い棒</td><td>頭狙いにくいので脚スタン</td></tr>
+        <tr><td><b>steve crawler</b><br>(クローラー)</td><td>地面這う、低姿勢</td><td>下向き斧/槍</td><td>長棒</td><td>足元に注意、土台削られる</td></tr>
+        <tr><td><b>tom clark</b><br>(トム・クラーク)</td><td>標準男性</td><td>棍棒・ナイフ</td><td>-</td><td>普通の雑魚</td></tr>
+        <tr><td><b>utility worker 🛡️</b><br>(作業員)</td><td>アーマー20、対物高い</td><td>鉄鋼槍・AP弾</td><td>鈍器</td><td>拠点破壊力高いので速攻</td></tr>
+        <tr><td><b>wight</b><br>(ワイト)</td><td>常時全速力、フェラル以上</td><td>ショットガン・スレッジ</td><td>低火力</td><td>足止め+高火力必須</td></tr>
+        <tr><td><b>yo</b><br>(ヨー)</td><td>腕突き出し、動き遅い</td><td>棍棒・スレッジ</td><td>-</td><td>狙いにくいが動き遅い</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary><b>📖 データ参考 / 計算詳細</b></summary>
+    <div style="margin-top:10px;font-size:0.85em;color:#ccc;line-height:1.6;">
+      <b>武器特殊効果：</b><br>
+      ・槍系：アーマー無視 -30%(石)/-40%(鉄)/-50%(鉄鋼)<br>
+      ・ライフル系：ヘッドショット時に追加ダメージ（HS攻撃力）<br>
+      ・AP弾：アーマー補正 -50%、敵貫通+1<br>
+      ・棍棒/スレッジ：パワーアタック+100%/+125%<br><br>
+      <b>アーマー持ちゾンビ：</b><br>
+      ・バイカー、作業員：アーマー20 / 兵士：アーマー50 / 解体：アーマー60<br>
+      ・蜂/虫の群れ：遠距離アーマー99、近接75
+    </div>
+  </details>
+
+  <div class="footer">
+    Data: <a href="https://wikiwiki.jp/7daystodie/" target="_blank" style="color:#888;">7days to die Japan Wiki</a> | 計算は近似値です
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+// HP値はゲームXML(entityclasses.xml V2.x)から完全抽出
+// 英語名はSTEギフト設定画面に準拠
+// 変異/囚人/チャック等のV2追加分はXML未確認のため実測ベース推定
+// 各カテゴリ内は英語名(e)の昇順でソート
+const ZOMBIES = {
+  "ゾンビ": [
+    {n:"アーリーン(腐敗女子)", e:"arlene", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"バイカー", e:"biker", hp:[280,532,1010,1500,2000], regen:[0,0,9,9,9], armor:20},
+    {n:"ボウ(感染サバイバー)", e:"boe", hp:[150,285,541,810,1080], regen:[0,0,4.5,4.5,4.5], armor:0},
+    {n:"ボウラー(元フットボール)", e:"bowler", hp:[250,475,902,1350,1800], regen:[0,0,6,6,6], armor:0, note:"V2.5でfootball playerから改名"},
+    {n:"焦げたゾンビ", e:"burnt", hp:[150,285,541,810,1080], regen:[0,0,4,4,4], armor:0},
+    {n:"ビジネスマン", e:"business man", hp:[150,285,541,810,1080], regen:[0,0,1.4,1.4,1.4], armor:0},
+    {n:"チャック(投石)", e:"chuck", hp:[500,950,1800,2300,2800], regen:[0,0,4,4,4], armor:0, note:"V2追加"},
+    {n:"ダーリーン(腐乱マザー)", e:"darlene", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"解体(デモリッシャー)", e:"demolition", hp:[1000,0,0,0,0], regen:[0,0,0,0,0], armor:60, note:"通常のみ・自爆"},
+    {n:"ビッグママ(空腹ゾンビ)", e:"fat", hp:[300,570,902,1350,1800], regen:[0,0,9,9,9], armor:0, note:"Female Fat"},
+    {n:"警官(肥満警官)", e:"fat cop", hp:[250,475,902,1350,1800], regen:[0,0,9,9,9], armor:0, note:"HP40%で自爆"},
+    {n:"観光客(アロハデブ)", e:"fat hawaiian", hp:[300,570,902,1350,1800], regen:[0,0,9,9,9], armor:0},
+    {n:"危険物処理班", e:"Hazmat", hp:[150,285,541,810,1080], regen:[0,0,4.5,4.5,4.5], armor:0},
+    {n:"囚人", e:"inmate", hp:[150,285,541,810,1080], regen:[0,0,4,4,4], armor:0, note:"V2追加・HP推定値"},
+    {n:"用務員", e:"janitor", hp:[150,285,541,810,1080], regen:[0,0,4.5,4.5,4.5], armor:0},
+    {n:"ジョー(化膿亡骸)", e:"joe", hp:[150,285,541,810,1080], regen:[0,0,4,4,4], armor:0},
+    {n:"研究員", e:"Lab", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"木こり", e:"lumberjack", hp:[300,570,902,1350,1800], regen:[0,0,9,9,9], armor:0},
+    {n:"マーリーン(死亡女性)", e:"marlene", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"モー(肥大化作業員)", e:"moe", hp:[250,475,902,1350,1800], regen:[0,0,8,8,8], armor:0},
+    {n:"変異", e:"mutated", hp:[150,285,552,820,1100], regen:[0,0,2.5,2.5,2.5], armor:0, note:"V2追加・実測ベース(17発×32.5)"},
+    {n:"看護師(ナース)", e:"nurse", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"パーティーガール", e:"party girl", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"ランチャー(虫吐き)", e:"rancher", hp:[250,475,902,1350,1800], regen:[0,0,4,4,4], armor:0, note:"V2追加"},
+    {n:"絶叫", e:"screamer", hp:[75,142,270,400,540], regen:[0,0,2.5,2.5,2.5], armor:0},
+    {n:"悪党(スケートパンク)", e:"skateborder", hp:[150,285,541,810,1080], regen:[0,0,6,6,6], armor:0},
+    {n:"兵士(ソルジャー)", e:"soldier", hp:[150,285,541,810,1080], regen:[0,0,6,6,6], armor:50},
+    {n:"スパイダー", e:"spider", hp:[150,285,541,810,1080], regen:[0,0,5,5,5], armor:0, note:"通常個体は部位破壊無効"},
+    {n:"スティーブ(動く死体)", e:"steve", hp:[150,285,541,810,1080], regen:[0,0,4,4,4], armor:0},
+    {n:"クローラー(這いずり)", e:"steve crawler", hp:[80,152,0,0,0], regen:[0,0,0,0,0], armor:0, note:"フェラルまで"},
+    {n:"トム・クラーク", e:"tom clark", hp:[125,237,451,675,900], regen:[0,0,4,4,4], armor:0},
+    {n:"作業員", e:"utility worker", hp:[150,285,541,810,1080], regen:[0,0,1.4,1.4,1.4], armor:20},
+    {n:"ワイト", e:"wight", hp:[0,532,1010,1500,2000], regen:[0,0,6,6,6], armor:0, note:"フェラル以上のみ"},
+    {n:"ヨー(腐りかけ)", e:"yo", hp:[150,285,541,810,1080], regen:[0,0,5,5,5], armor:0},
+  ],
+  "動物": [
+    // 動物のSTE名はおそらく公式Twitch Integration準拠と推定
+    {n:"クマ(グリズリー)", e:"bear", hp:[1600,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"子熊", e:"bear small", hp:[800,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"イノシシ", e:"boar", hp:[250,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"ニワトリ", e:"chicken", hp:[10,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"コヨーテ", e:"coyote", hp:[100,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"ダイアウルフ", e:"direwolf", hp:[750,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true, note:"頭部部位破壊無効"},
+    {n:"雌鹿", e:"doe", hp:[50,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"ゾンビ犬", e:"dog", hp:[200,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"グレース", e:"grace", hp:[2000,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true, note:"頭部部位破壊無効"},
+    {n:"クーガー(マウンテンライオン)", e:"lion", hp:[400,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true, note:"推定値"},
+    {n:"ウサギ", e:"rabbit", hp:[10,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"放射能ハゲワシ", e:"radvulture", hp:[120,0,0,0,0], regen:[4,0,0,0,0], armor:0, animal:true},
+    {n:"ヘビ", e:"snake", hp:[10,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"雄鹿", e:"stag", hp:[100,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"ハゲワシ", e:"vulture", hp:[30,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"オオカミ", e:"wolf", hp:[200,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true},
+    {n:"ゾンビ熊", e:"zombie bear", hp:[2000,0,0,0,0], regen:[0,0,0,0,0], armor:0, animal:true, note:"頭部部位破壊無効"},
+  ]
+};
+
+const VARIANT_NAMES = ["通常 (normal)", "フェラル (feral)", "放射能汚染 (radiated)", "チャージド (charged)", "インファーナル (infernal)"];
+const VARIANT_SUFFIX = ["", " feral", " radiated", " charged", " infernal"];
+
+const WEAPONS = {
+  // 近接武器: ゲーム内表示値（wiki準拠・品質1相当のクラフト時表示値）
+  // ※ XMLの素値はもっと低いが、プレイヤーが実際に見るのは品質変動込みのこちらの値
+  "近接：棍棒系": [
+    {n:"木製棍棒(T0)", e:"wooden club", dmg:12, hsMult:1.5, paBonus:1.0, speed:55, ammos:[{n:"通常",mult:1}]},
+    {n:"ベースボールバット(T1)", e:"baseball bat", dmg:20, hsMult:1.5, paBonus:1.0, speed:52, ammos:[{n:"通常",mult:1}]},
+    {n:"キャンディーケーン型棍棒(T1)", e:"candy club", dmg:20, hsMult:1.5, paBonus:1.0, speed:52, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼製棍棒(T3)", e:"steel club", dmg:32.5, hsMult:1.5, paBonus:1.0, speed:52, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：スレッジハンマー系": [
+    {n:"石製スレッジハンマー(T0)", e:"stone sledgehammer", dmg:18, hsMult:1.5, paBonus:1.25, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄製スレッジハンマー(T1)", e:"iron sledgehammer", dmg:32, hsMult:1.5, paBonus:1.25, speed:34, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼製スレッジハンマー(T3)", e:"steel sledgehammer", dmg:55, hsMult:1.5, paBonus:1.25, speed:34, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：槍系": [
+    {n:"石槍(T0)", e:"stone spear", dmg:12, hsMult:1.5, paBonus:1.0, speed:55, armorPen:0.30, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄槍(T1)", e:"iron spear", dmg:20, hsMult:1.5, paBonus:1.0, speed:55, armorPen:0.40, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼槍(T3)", e:"steel spear", dmg:33, hsMult:1.5, paBonus:1.0, speed:55, armorPen:0.50, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：ナックル系": [
+    {n:"素手", e:"(bare hands)", dmg:5, hsMult:1.5, paBonus:1.0, speed:80, ammos:[{n:"通常",mult:1}]},
+    {n:"ナックルラップ(T0)", e:"leather knuckles", dmg:7, hsMult:1.5, paBonus:1.0, speed:100, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄ナックル(T1)", e:"iron knuckles", dmg:11.5, hsMult:1.5, paBonus:1.0, speed:100, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼ナックル(T3)", e:"steel knuckles", dmg:19, hsMult:1.5, paBonus:1.0, speed:100, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：ブレード系": [
+    {n:"骨ナイフ(T0)", e:"bone knife", dmg:5, hsMult:2.0, paBonus:1.0, paFlat:5.1, speed:120, sneakBonus:4.0, ammos:[{n:"通常",mult:1}]},
+    {n:"狩猟ナイフ(T1)", e:"hunting knife", dmg:12, hsMult:2.0, paBonus:1.0, paFlat:6, speed:120, sneakBonus:4.0, ammos:[{n:"通常",mult:1}]},
+    {n:"キャンディーケーン型ナイフ(T1)", e:"candy knife", dmg:12, hsMult:2.0, paBonus:1.0, paFlat:6.7, speed:120, sneakBonus:4.0, ammos:[{n:"通常",mult:1}]},
+    {n:"マチェーテ(T3)", e:"machete", dmg:25, hsMult:2.0, paBonus:1.0, speed:65, sneakBonus:4.0, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：バトン系": [
+    {n:"パイプバトン(T0)", e:"junk baton", dmg:12, hsMult:1.5, paBonus:1.0, speed:60, ammos:[{n:"通常",mult:1}]},
+    {n:"スタンバトン(T2)", e:"stun baton", dmg:20, hsMult:1.5, paBonus:1.0, speed:70, ammos:[{n:"通常",mult:1}]},
+    {n:"プラズマバトン(T3)", e:"plasma baton", dmg:20, hsMult:1.5, paBonus:1.0, speed:70, ammos:[{n:"通常",mult:1}]},
+  ],
+  "近接：ツール": [
+    {n:"松明", e:"torch", dmg:10.2, hsMult:1.5, paBonus:0, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"フラッシュライト", e:"flashlight", dmg:7.2, hsMult:1.5, paBonus:1.0, speed:65, ammos:[{n:"通常",mult:1}]},
+    {n:"石斧(T0)", e:"stone axe", dmg:6, hsMult:1.5, paBonus:1.0, speed:105, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄製消防斧(T1)", e:"iron fireaxe", dmg:15, hsMult:1.5, paBonus:1.25, speed:65, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼斧(T2)", e:"steel axe", dmg:29, hsMult:1.5, paBonus:1.25, speed:55, ammos:[{n:"通常",mult:1}]},
+    {n:"くぎ抜きハンマー(T1)", e:"claw hammer", dmg:12, hsMult:1.5, paBonus:1.0, speed:70, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄つるはし(T1)", e:"iron pickaxe", dmg:11.2, hsMult:1.5, paBonus:1.0, speed:65, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼つるはし(T2)", e:"steel pickaxe", dmg:23.2, hsMult:1.5, paBonus:1.25, speed:55, ammos:[{n:"通常",mult:1}]},
+    {n:"石ショベル(T0)", e:"stone shovel", dmg:9.6, hsMult:1.5, paBonus:1.25, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄ショベル(T1)", e:"iron shovel", dmg:15, hsMult:1.5, paBonus:1.25, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄鋼ショベル(T2)", e:"steel shovel", dmg:25, hsMult:1.5, paBonus:1.25, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"レンチ(T1)", e:"wrench", dmg:16.5, hsMult:1.5, paBonus:1.0, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"ラチェット(T2)", e:"ratchet", dmg:16.5, hsMult:1.5, paBonus:1.0, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"衝撃ドライバー(T3)", e:"impact driver", dmg:16.5, hsMult:1.5, paBonus:1.0, speed:50, ammos:[{n:"通常",mult:1}]},
+    {n:"鉄ホー(農業)", e:"iron hoe", dmg:13.2, hsMult:1.5, paBonus:1.0, speed:55, ammos:[{n:"通常",mult:1}]},
+  ],
+  "遠距離：弓・クロスボウ": [
+    {n:"粗末な弓(T0)", e:"primitive bow", dmg:30, hsMult:2.0, paBonus:0, speed:75, sneakBonus:2.0, ammos:[
+      {n:"石矢",mult:1, base:30},{n:"鉄矢",mult:1, base:33, armorPen:0.2},
+      {n:"鉄鋼矢",mult:1, base:37, armorPen:0.5},{n:"燃焼矢",mult:1, base:20},
+      {n:"爆発矢",mult:1, base:175, explosion:180}
+    ]},
+    {n:"木の弓(T1)", e:"wooden bow", dmg:44, hsMult:2.0, paBonus:0, speed:75, sneakBonus:2.0, ammos:[
+      {n:"石矢",mult:1, base:44},{n:"鉄矢",mult:1, base:47, armorPen:0.2},
+      {n:"鉄鋼矢",mult:1, base:51, armorPen:0.5},{n:"燃焼矢",mult:1, base:34}
+    ]},
+    {n:"複合弓(T3)", e:"compound bow", dmg:64, hsMult:2.0, paBonus:0, speed:75, sneakBonus:2.0, ammos:[
+      {n:"石矢",mult:1, base:64},{n:"鉄矢",mult:1, base:67, armorPen:0.2},
+      {n:"鉄鋼矢",mult:1, base:71, armorPen:0.5}
+    ]},
+    {n:"鉄製クロスボウ(T1)", e:"iron crossbow", dmg:50, hsMult:2.0, paBonus:0, speed:75, sneakBonus:2.0, ammos:[
+      {n:"石ボルト",mult:1, base:50},{n:"鉄ボルト",mult:1, base:59, armorPen:0.2},
+      {n:"鉄鋼ボルト",mult:1, base:63, armorPen:0.5}
+    ]},
+    {n:"複合クロスボウ(T3)", e:"compound crossbow", dmg:75, hsMult:2.0, paBonus:0, speed:75, sneakBonus:2.0, ammos:[
+      {n:"石ボルト",mult:1, base:75},{n:"鉄ボルト",mult:1, base:84, armorPen:0.2},
+      {n:"鉄鋼ボルト",mult:1, base:88, armorPen:0.5}
+    ]},
+  ],
+  "遠距離：ハンドガン": [
+    {n:"パイプピストル(T0)", e:"pipe pistol", dmg:28, hsMult:1.5, paBonus:0, speed:126, ammos:[
+      {n:"9mm弾",mult:1, base:28},{n:"HP9mm",mult:1, base:31},
+      {n:"AP9mm",mult:1, base:34, armorPen:0.5}
+    ]},
+    {n:"ピストル(T1)", e:"pistol", dmg:37, hsMult:1.5, paBonus:0, speed:180, ammos:[
+      {n:"9mm弾",mult:1, base:37},{n:"HP9mm",mult:1, base:40},
+      {n:"AP9mm",mult:1, base:43, armorPen:0.5}
+    ]},
+    {n:".44マグナム(T2)", e:".44 magnum", dmg:65, hsMult:1.5, paBonus:0, speed:100, ammos:[
+      {n:".44弾",mult:1, base:65},{n:"HP.44",mult:1, base:72},
+      {n:"AP.44",mult:1, base:79, armorPen:0.5}
+    ]},
+    {n:"SMG-5(T3)", e:"smg5", dmg:50, hsMult:1.5, paBonus:0, speed:480, ammos:[
+      {n:"9mm弾",mult:1, base:50},{n:"HP9mm",mult:1, base:53},
+      {n:"AP9mm",mult:1, base:56, armorPen:0.5}
+    ]},
+    {n:".44 デザートヴァルチャー(T3)", e:".44 desert vulture", dmg:90, hsMult:1.5, paBonus:0, speed:130, ammos:[
+      {n:".44弾",mult:1, base:90},{n:"HP.44",mult:1, base:97},
+      {n:"AP.44",mult:1, base:104, armorPen:0.5}
+    ]},
+  ],
+  "遠距離：ライフル": [
+    {n:"パイプライフル(T0)", e:"pipe rifle", dmg:44, hsMult:1.0, paBonus:0, hsBonus:25, speed:120, ammos:[
+      {n:"7.62mm",mult:1, base:44},{n:"HP7.62",mult:1, base:49},
+      {n:"AP7.62",mult:1, base:54, armorPen:0.5}
+    ]},
+    {n:"狩猟ライフル(T1)", e:"hunting rifle", dmg:58, hsMult:1.0, paBonus:0, hsBonus:50, speed:120, ammos:[
+      {n:"7.62mm",mult:1, base:58},{n:"HP7.62",mult:1, base:63},
+      {n:"AP7.62",mult:1, base:68, armorPen:0.5}
+    ]},
+    {n:"レバーアクション(T2)", e:"lever action rifle", dmg:76, hsMult:1.0, paBonus:0, hsBonus:100, speed:82, ammos:[
+      {n:"7.62mm",mult:1, base:76},{n:"HP7.62",mult:1, base:81},
+      {n:"AP7.62",mult:1, base:86, armorPen:0.5}
+    ]},
+    {n:"スナイパーライフル(T3)", e:"sniper rifle", dmg:100, hsMult:1.0, paBonus:0, hsBonus:200, speed:140, ammos:[
+      {n:"7.62mm",mult:1, base:100},{n:"HP7.62",mult:1, base:105},
+      {n:"AP7.62",mult:1, base:110, armorPen:0.5}
+    ]},
+  ],
+  "遠距離：マシンガン": [
+    {n:"パイプマシンガン(T0)", e:"pipe machine gun", dmg:30, hsMult:1.5, paBonus:0, speed:335, ammos:[
+      {n:"7.62mm",mult:1, base:30},{n:"HP7.62",mult:1, base:35},
+      {n:"AP7.62",mult:1, base:40, armorPen:0.5}
+    ]},
+    {n:"AK-47(T1)", e:"ak47", dmg:40, hsMult:1.5, paBonus:0, speed:360, ammos:[
+      {n:"7.62mm",mult:1, base:40},{n:"HP7.62",mult:1, base:45},
+      {n:"AP7.62",mult:1, base:50, armorPen:0.5}
+    ]},
+    {n:"タクティカルAR(T2)", e:"tactical assault rifle", dmg:53, hsMult:1.5, paBonus:0, speed:405, ammos:[
+      {n:"7.62mm",mult:1, base:53},{n:"HP7.62",mult:1, base:58},
+      {n:"AP7.62",mult:1, base:63, armorPen:0.5}
+    ]},
+    {n:"M60マシンガン(T3)", e:"m60", dmg:70, hsMult:1.5, paBonus:0, speed:440, ammos:[
+      {n:"7.62mm",mult:1, base:70},{n:"HP7.62",mult:1, base:75},
+      {n:"AP7.62",mult:1, base:80, armorPen:0.5}
+    ]},
+  ],
+  "遠距離：ショットガン": [
+    {n:"パイプショットガン(T0)", e:"pipe shotgun", dmg:81, hsMult:1.5, paBonus:0, speed:120, ammos:[
+      {n:"シェル(10ペレット全弾命中)",mult:1, base:81},{n:"AP弾",mult:1, base:100, armorPen:0.5},
+      {n:"ブリーチング弾",mult:1, base:94}
+    ]},
+    {n:"2連ショットガン(T1)", e:"double barrel shotgun", dmg:111, hsMult:1.5, paBonus:0, speed:60, ammos:[
+      {n:"シェル(全弾命中)",mult:1, base:111},{n:"AP弾",mult:1, base:103, armorPen:0.5},
+      {n:"ブリーチング弾",mult:1, base:97}
+    ]},
+    {n:"ポンプショットガン(T2)", e:"pump shotgun", dmg:151, hsMult:1.5, paBonus:0, speed:60, ammos:[
+      {n:"シェル(全弾命中)",mult:1, base:151},{n:"AP弾",mult:1, base:107, armorPen:0.5},
+      {n:"ブリーチング弾",mult:1, base:101}
+    ]},
+    {n:"オートショットガン(T3)", e:"auto shotgun", dmg:201, hsMult:1.5, paBonus:0, speed:70, ammos:[
+      {n:"シェル(全弾命中)",mult:1, base:201},{n:"AP弾",mult:1, base:122, armorPen:0.5},
+      {n:"ブリーチング弾",mult:1, base:116}
+    ]},
+  ],
+  "遠距離：爆発物": [
+    {n:"モロトフ・カクテル", e:"molotov cocktail", dmg:30, hsMult:1.0, paBonus:0, speed:30, ammos:[{n:"炎上ダメージ/秒",mult:1, base:30}], note:"炎上で継続ダメージ"},
+    {n:"パイプ爆弾", e:"pipe bomb", dmg:253, hsMult:1.0, paBonus:0, speed:30, ammos:[{n:"爆発",mult:1, base:253}]},
+    {n:"ダイナマイト", e:"stick of dynamite", dmg:550, hsMult:1.0, paBonus:0, speed:15, ammos:[{n:"爆発",mult:1, base:550}]},
+    {n:"手榴弾", e:"grenade", dmg:341, hsMult:1.0, paBonus:0, speed:20, ammos:[{n:"爆発",mult:1, base:341}]},
+    {n:"接触起爆手榴弾", e:"contact grenade", dmg:341, hsMult:1.0, paBonus:0, speed:30, ammos:[{n:"爆発",mult:1, base:341}]},
+    {n:"時限爆弾", e:"timed charge", dmg:800, hsMult:1.0, paBonus:0, speed:15, ammos:[{n:"爆発",mult:1, base:800}]},
+    {n:"ロケット(榴弾)", e:"rocket he", dmg:440, hsMult:1.0, paBonus:0, speed:75, ammos:[{n:"直撃+爆発",mult:1, base:440}]},
+    {n:"ロケット(破砕)", e:"rocket frag", dmg:760, hsMult:1.0, paBonus:0, speed:75, ammos:[{n:"直撃+爆発",mult:1, base:760}]},
+  ],
+};
+
+// ============================================================
+// STATE
+// ============================================================
+const giftWeapons = [];
+const giftTargets = [];
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  const wcSel = document.getElementById('weaponCategory');
+  Object.keys(WEAPONS).forEach(cat => {
+    const o = document.createElement('option');
+    o.value = cat; o.textContent = cat;
+    wcSel.appendChild(o);
+  });
+  wcSel.value = "近接：棍棒系";
+  wcSel.addEventListener('change', updateWeaponTypes);
+
+  const wtSel = document.getElementById('weaponType');
+  wtSel.addEventListener('change', updateWeaponAmmos);
+
+  const waSel = document.getElementById('weaponAmmo');
+  waSel.addEventListener('change', recalc);
+
+  const tcSel = document.getElementById('targetCategory');
+  Object.keys(ZOMBIES).forEach(cat => {
+    const o = document.createElement('option');
+    o.value = cat; o.textContent = cat;
+    tcSel.appendChild(o);
+  });
+  tcSel.value = "ゾンビ";
+  tcSel.addEventListener('change', updateTargets);
+
+  const ttSel = document.getElementById('targetType');
+  ttSel.addEventListener('change', recalc);
+
+  ['totalBoost','powerAttack','hitLocation','meleeHsMult','sneakAttack',
+   'considerRegen','considerArmor','nightMode','downedBonus','difficulty'].forEach(id => {
+    document.getElementById(id).addEventListener('change', recalc);
+    document.getElementById(id).addEventListener('input', recalc);
+  });
+
+  updateWeaponTypes();
+  updateTargets();
+}
+
+function updateWeaponTypes() {
+  const cat = document.getElementById('weaponCategory').value;
+  const wtSel = document.getElementById('weaponType');
+  wtSel.innerHTML = '';
+  WEAPONS[cat].forEach((w, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = (w.e || '???') + ' (' + w.n + ')';
+    wtSel.appendChild(o);
+  });
+  // 鉄鋼製棍棒 default if available
+  const steelIdx = WEAPONS[cat].findIndex(w => w.n.includes("鉄鋼"));
+  if (steelIdx >= 0) wtSel.value = steelIdx;
+  updateWeaponAmmos();
+}
+
+function updateWeaponAmmos() {
+  const cat = document.getElementById('weaponCategory').value;
+  const wIdx = parseInt(document.getElementById('weaponType').value);
+  const w = WEAPONS[cat][wIdx];
+  const waSel = document.getElementById('weaponAmmo');
+  waSel.innerHTML = '';
+  w.ammos.forEach((a, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = a.n;
+    waSel.appendChild(o);
+  });
+  recalc();
+}
+
+function updateTargets() {
+  const cat = document.getElementById('targetCategory').value;
+  const ttSel = document.getElementById('targetType');
+  ttSel.innerHTML = '';
+  ZOMBIES[cat].forEach((z, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    const armorMark = z.armor > 0 ? ' 🛡️' : '';
+    o.textContent = (z.e || '???') + armorMark + ' (' + z.n + ')';
+    ttSel.appendChild(o);
+  });
+  recalc();
+}
+
+// ============================================================
+// CALCULATION
+// ============================================================
+function calcDamagePerHit(w, ammo) {
+  let dmg = ammo.base !== undefined ? ammo.base : w.dmg;
+
+  // パワーアタック
+  if (document.getElementById('powerAttack').checked && w.paBonus > 0) {
+    dmg *= (1 + w.paBonus);
+    if (w.paFlat) dmg += w.paFlat * (1 + w.paBonus);
+  }
+
+  // 命中部位
+  const loc = document.getElementById('hitLocation').value;
+  if (loc === 'head') {
+    if (w.hsBonus) {
+      dmg += w.hsBonus; // ライフル系の追加ダメージ
+      const customMult = parseFloat(document.getElementById('meleeHsMult').value) || 1.5;
+      dmg *= customMult;
+    } else {
+      const customMult = parseFloat(document.getElementById('meleeHsMult').value) || w.hsMult;
+      dmg *= customMult;
+    }
+  } else {
+    dmg *= parseFloat(loc);
+  }
+
+  // 奇襲
+  if (document.getElementById('sneakAttack').checked && w.sneakBonus) {
+    dmg *= (1 + w.sneakBonus);
+  }
+
+  // 強化合計（品質+MOD+技能の総ボーナス）
+  const boost = parseFloat(document.getElementById('totalBoost').value) || 0;
+  dmg *= (1 + boost / 100);
+
+  // ダウン中ボーナス
+  if (document.getElementById('downedBonus').checked) dmg *= 1.50;
+
+  // 難易度修正
+  const diff = parseFloat(document.getElementById('difficulty').value) || 1.0;
+  dmg *= diff;
+
+  return dmg;
+}
+
+function calcSingle(hp, dmgPerHit, regen, armor, armorPen, speed) {
+  // 1パターンの計算（min/mid/max用に各HP×ダメージで呼ぶ）
+  if (hp <= 0) return null;
+  let effectiveDmg = dmgPerHit;
+  if (document.getElementById('considerArmor').checked && armor > 0) {
+    const penetration = armorPen || 0;
+    const effectiveArmor = armor * (1 - penetration);
+    effectiveDmg = dmgPerHit * (1 - effectiveArmor / 100);
+    if (effectiveDmg < 1) effectiveDmg = 1;
+  }
+  if (document.getElementById('considerRegen').checked && regen > 0) {
+    const TICK = 2.5;
+    const attacksPerSec = speed / 60;
+    const dps = effectiveDmg * attacksPerSec;
+    const baseKillTime = hp / dps;
+    const tickCount = Math.max(0, Math.floor(baseKillTime / TICK));
+    const totalRegen = tickCount * regen * TICK;
+    const netHp = hp + totalRegen;
+    if (dps <= regen) return { hits: Infinity, totalRegen };
+    return { hits: Math.ceil(netHp / effectiveDmg), totalRegen };
+  }
+  return { hits: Math.ceil(hp / effectiveDmg), totalRegen: 0 };
+}
+
+function calcHitsToKill(hp, dmgPerHit, regen, armor, armorPen, speed) {
+  if (hp <= 0) return null;
+
+  // 個体差: HP ±15%, 武器ダメージ ±15%
+  const VARIANCE = 0.15;
+  // 最少回数 = HP最少 / ダメージ最大
+  const best = calcSingle(hp * (1 - VARIANCE), dmgPerHit * (1 + VARIANCE), regen, armor, armorPen, speed);
+  const mid = calcSingle(hp, dmgPerHit, regen, armor, armorPen, speed);
+  // 最多回数 = HP最大 / ダメージ最少
+  const worst = calcSingle(hp * (1 + VARIANCE), dmgPerHit * (1 - VARIANCE), regen, armor, armorPen, speed);
+
+  if (!mid || mid.hits === Infinity) {
+    return { hits: '∞', range: '回復>DPS', warn: true, note: '回復>DPS' };
+  }
+  const note = mid.totalRegen > 0 ? `+${Math.round(mid.totalRegen)}HP回復込` : '';
+  if (best.hits === worst.hits) {
+    return { hits: mid.hits, range: `${mid.hits}発`, warn: false, note };
+  }
+  return { hits: mid.hits, range: `${best.hits}〜${worst.hits}発`, warn: false, note };
+}
+
+function recalc() {
+  const wCat = document.getElementById('weaponCategory').value;
+  const wIdx = parseInt(document.getElementById('weaponType').value);
+  const aIdx = parseInt(document.getElementById('weaponAmmo').value);
+  const w = WEAPONS[wCat][wIdx];
+  const ammo = w.ammos[aIdx];
+
+  const tCat = document.getElementById('targetCategory').value;
+  const tIdx = parseInt(document.getElementById('targetType').value);
+  const z = ZOMBIES[tCat][tIdx];
+
+  const dmgPerHit = calcDamagePerHit(w, ammo);
+
+  // 武器情報
+  const dmgMin = (dmgPerHit * 0.85).toFixed(1);
+  const dmgMax = (dmgPerHit * 1.15).toFixed(1);
+  document.getElementById('weaponInfo').innerHTML = `
+    <div class="stat-line"><span>武器</span><span class="v">${w.e || '???'} <span style="color:#ccc;font-size:0.85em;">(${w.n})</span></span></div>
+    <div class="stat-line"><span>弾薬/種類</span><span class="v">${ammo.n}</span></div>
+    <div class="stat-line"><span>基礎攻撃力（ゲーム内表示値）</span><span class="v">${(ammo.base || w.dmg).toFixed(1)}</span></div>
+    <div class="stat-line"><span>計算後の1発ダメージ（中央値）</span><span class="v">${dmgPerHit.toFixed(1)}</span></div>
+    <div class="stat-line"><span>武器個体差±15%でのダメージレンジ</span><span class="v">${dmgMin} 〜 ${dmgMax}</span></div>
+    <div class="stat-line"><span>攻撃速度(/分)</span><span class="v">${w.speed}</span></div>
+    ${w.armorPen ? `<div class="stat-line"><span>アーマー貫通</span><span class="v">-${(w.armorPen*100).toFixed(0)}%</span></div>` : ''}
+    ${ammo.armorPen ? `<div class="stat-line"><span>弾薬アーマー補正</span><span class="v">-${(ammo.armorPen*100).toFixed(0)}%</span></div>` : ''}
+  `;
+
+  // ターゲット情報
+  document.getElementById('targetInfo').innerHTML = `
+    <div class="stat-line"><span>名前</span><span class="v">${z.e || '???'} <span style="color:#ccc;font-size:0.85em;">(${z.n})</span></span></div>
+    <div class="stat-line"><span>通常HP</span><span class="v">${z.hp[0] || '-'}</span></div>
+    ${z.armor > 0 ? `<div class="stat-line"><span>アーマー値 🛡️</span><span class="v">${z.armor} <span style="font-size:0.8em;color:#888;">(計算式不明のため目安)</span></span></div>` : ''}
+    ${z.note ? `<div class="stat-line"><span>備考</span><span class="v">${z.note}</span></div>` : ''}
+  `;
+
+  // 結果表
+  const tbody = document.getElementById('resultBody');
+  tbody.innerHTML = '';
+  const armorPen = (w.armorPen || 0) + (ammo.armorPen || 0);
+
+  // 品質Q1〜Q6の倍率: Q1=0%, Q2=10%, Q3=20%, Q4=30%, Q5=40%, Q6=50%
+  const qualityBonuses = [0, 0.10, 0.20, 0.30, 0.40, 0.50];
+
+  for (let i = 0; i < 5; i++) {
+    const hp = z.hp[i];
+    if (!hp || hp === 0) continue;
+    const regen = z.regen[i];
+
+    // 各品質ごとに計算
+    const qResults = qualityBonuses.map(qBonus => {
+      const qDmg = dmgPerHit * (1 + qBonus);
+      return calcHitsToKill(hp, qDmg, regen, z.armor, armorPen, w.speed);
+    });
+
+    const tr = document.createElement('tr');
+    const giftId = z.e ? (z.e + VARIANT_SUFFIX[i]) : '';
+    const hpRange = `${Math.round(hp*0.85)}〜${Math.round(hp*1.15)}`;
+
+    // 各品質セルを構築
+    const qCells = qResults.map(r => {
+      if (!r) return '<td>-</td>';
+      const cls = r.warn ? 'regen-warn' : (r.hits <= 1 ? 'weak hits-cell' : 'hits-cell');
+      return `<td><span class="${cls}" style="font-size:0.9em;">${r.range || (r.hits + '発')}</span></td>`;
+    }).join('');
+
+    const midRes = qResults[0]; // Q1の結果から備考を取る
+    tr.innerHTML = `
+      <td class="variant-name">
+        ${giftId ? '<div style="font-weight:700;color:#ffa500;font-size:0.95em;">🎁 ' + giftId + '</div>' : ''}
+        <div style="font-size:0.78em;color:#bbb;font-weight:normal;">${VARIANT_NAMES[i]}${z.animal ? ' (動物)' : ''}</div>
+      </td>
+      <td>${hp}<div style="font-size:0.7em;color:#888;">${hpRange}</div></td>
+      <td>${regen > 0 ? regen + '/秒' : '-'}</td>
+      ${qCells}
+      <td style="font-size:0.72em;color:#888;">${midRes && midRes.note ? midRes.note : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  if (tbody.children.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">この個体タイプは存在しません</td></tr>';
+  }
+}
+
+// ============================================================
+// GIFT BUILDER
+// ============================================================
+function addCurrentToGift() {
+  const wCat = document.getElementById('weaponCategory').value;
+  const wIdx = parseInt(document.getElementById('weaponType').value);
+  const aIdx = parseInt(document.getElementById('weaponAmmo').value);
+  const w = WEAPONS[wCat][wIdx];
+  const ammo = w.ammos[aIdx];
+  const item = {jp: `${w.n} (${ammo.n})`, en: w.e || ''};
+  if (!giftWeapons.find(x => x.jp === item.jp)) {
+    giftWeapons.push(item);
+    renderGiftList();
+  }
+}
+
+function addCurrentTargetToGift() {
+  const tCat = document.getElementById('targetCategory').value;
+  const tIdx = parseInt(document.getElementById('targetType').value);
+  const z = ZOMBIES[tCat][tIdx];
+  // すべてのバリエーション分追加可能なように選択UI
+  const variantOptions = [];
+  for (let i = 0; i < 5; i++) {
+    if (z.hp[i] > 0) variantOptions.push(i);
+  }
+  // 一旦すべての存在するバリエーションを追加
+  variantOptions.forEach(i => {
+    const enId = z.e ? (z.e + VARIANT_SUFFIX[i]) : '';
+    const item = {jp: z.n + ' [' + VARIANT_NAMES[i].split(' ')[0] + ']', en: enId};
+    if (!giftTargets.find(x => x.jp === item.jp)) giftTargets.push(item);
+  });
+  renderGiftList();
+}
+
+function removeGiftWeapon(i) { giftWeapons.splice(i, 1); renderGiftList(); }
+function removeGiftTarget(i) { giftTargets.splice(i, 1); renderGiftList(); }
+
+function renderGiftList() {
+  const wEl = document.getElementById('weaponGiftList');
+  const tEl = document.getElementById('targetGiftList');
+  wEl.innerHTML = giftWeapons.length === 0 ? '<div class="empty-msg">未追加</div>' :
+    giftWeapons.map((w,i) => `<div class="gift-item"><span>${i+1}. ${w.jp}<br><span style="color:#ff8;font-size:0.9em;">${w.en}</span></span><button onclick="removeGiftWeapon(${i})">×</button></div>`).join('');
+  tEl.innerHTML = giftTargets.length === 0 ? '<div class="empty-msg">未追加</div>' :
+    giftTargets.map((t,i) => `<div class="gift-item"><span>${i+1}. ${t.jp}<br><span style="color:#ff8;font-size:0.9em;">${t.en}</span></span><button onclick="removeGiftTarget(${i})">×</button></div>`).join('');
+}
+
+function exportGiftTable() {
+  let txt = '🎁 妨害配信ギフト表\n\n';
+  txt += '【武器ギフト候補】\n';
+  giftWeapons.forEach((w,i) => txt += `${i+1}. ${w.jp}\n   → ${w.en}\n`);
+  txt += '\n【ターゲット（ゾンビ）ギフト候補】\n';
+  giftTargets.forEach((t,i) => txt += `${i+1}. ${t.jp}\n   → ${t.en}\n`);
+  txt += '\n※ 英語IDは7days to dieのギフト/spawn指定で使えます\n';
+  const ta = document.getElementById('exportArea');
+  ta.style.display = 'block';
+  ta.value = txt;
+  ta.select();
+}
+
+// ============================================================
+// COMMENT SYSTEM (Firebase Realtime DB / fallback: localStorage)
+// ============================================================
+// 🔥 Firebase設定 ───────────────────────────────────
+// 共有コメント機能を使うには、ここを自分のFirebaseプロジェクトの設定で書き換え
+// (Firebase Console → プロジェクト設定 → ウェブアプリ から取得)
+// 書き換えない場合はlocalStorage(個人保存)で動作します
+const FIREBASE_CONFIG = {
+  apiKey:        "AIzaSyDTHj_Zx0wPUJscsZVFLtYyPrOMKqCQpk0",
+  authDomain:    "days-to-die-stream.firebaseapp.com",
+  databaseURL:   "https://days-to-die-stream-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId:     "days-to-die-stream",
+  storageBucket: "days-to-die-stream.firebasestorage.app",
+  messagingSenderId: "1088338154128",
+  appId:          "1:1088338154128:web:5f6a636b9a6e3dec7dfe15",
+};
+// ────────────────────────────────────────────────
+
+const FIREBASE_ENABLED = !FIREBASE_CONFIG.apiKey.includes('YOUR_');
+let firebaseDB = null;
+let firebaseListenerRef = null;
+
+if (FIREBASE_ENABLED && typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseDB = firebase.database();
+    console.log('🔥 Firebase接続成功 - コメント共有モード');
+  } catch (e) {
+    console.warn('Firebase初期化失敗、localStorageモードで継続:', e);
+    firebaseDB = null;
+  }
+}
+
+let showingAllComments = false;
+
+function getCurrentZombieKey() {
+  const tCat = document.getElementById('targetCategory').value;
+  const tIdx = parseInt(document.getElementById('targetType').value);
+  const z = ZOMBIES[tCat][tIdx];
+  return { key: (z.e || z.n).replace(/[^a-zA-Z0-9_]/g, '_'), name: z.e + ' (' + z.n + ')' };
+}
+
+function loadComments() {
+  const { key, name } = getCurrentZombieKey();
+  document.getElementById('commentZombieName').textContent = '→ ' + name + (firebaseDB ? ' 🔥' : ' 💾');
+
+  // 古いリスナー解除
+  if (firebaseListenerRef) {
+    firebaseListenerRef.off();
+    firebaseListenerRef = null;
+  }
+
+  if (firebaseDB) {
+    // Firebase版：リアルタイム監視
+    firebaseListenerRef = firebaseDB.ref('comments/' + key);
+    firebaseListenerRef.on('value', snapshot => {
+      const data = snapshot.val();
+      const comments = data
+        ? Object.entries(data).map(([id, c]) => ({ ...c, _id: id }))
+        : [];
+      // 日付昇順（古→新）にソート、最終的に新しい順表示はrender側で反転
+      comments.sort((a, b) => (a._ts || 0) - (b._ts || 0));
+      renderComments(comments);
+    });
+  } else {
+    // localStorage版
+    let comments = [];
+    try {
+      comments = JSON.parse(localStorage.getItem('zcomments_' + key) || '[]');
+    } catch (e) { comments = []; }
+    renderComments(comments);
+  }
+}
+
+function renderComments(comments) {
+  const listEl = document.getElementById('commentList');
+  const toggleBtn = document.getElementById('toggleComments');
+  if (comments.length === 0) {
+    listEl.innerHTML = '<div style="color:#666;font-style:italic;padding:8px;text-align:center;">まだコメントはありません。最初の一言を投稿してみよう！</div>';
+    toggleBtn.style.display = 'none';
+    return;
+  }
+  const sorted = comments.slice().reverse(); // 新しい順
+  const visible = showingAllComments ? sorted : sorted.slice(0, 3);
+  listEl.innerHTML = visible.map((c) => {
+    // 削除用ID：Firebaseなら_id、localStorageならインデックス
+    const delArg = c._id ? `'${c._id}'` : comments.indexOf(c);
+    return `
+      <div style="background:rgba(30,35,55,0.5);border-left:3px solid #ff6b35;padding:8px 12px;margin-bottom:6px;border-radius:0 5px 5px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:#ffa500;font-weight:600;font-size:0.9em;">${escapeHtml(c.name || '名無し')}</span>
+          <span style="color:#666;font-size:0.75em;">${c.date || ''} <button onclick="deleteComment(${delArg})" style="background:transparent;color:#ff4466;border:none;cursor:pointer;font-size:0.85em;">×</button></span>
+        </div>
+        <div style="color:#ddd;font-size:0.9em;margin-top:4px;">${escapeHtml(c.text)}</div>
+      </div>
+    `;
+  }).join('');
+  if (comments.length > 3) {
+    toggleBtn.style.display = 'inline-block';
+    toggleBtn.textContent = showingAllComments ? '▲ 折りたたむ' : `▼ 全て表示 (残り${comments.length - 3}件)`;
+  } else {
+    toggleBtn.style.display = 'none';
+  }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function addComment() {
+  const nameEl = document.getElementById('commentName');
+  const textEl = document.getElementById('commentText');
+  const text = textEl.value.trim();
+  if (!text) return;
+  const name = (nameEl.value.trim() || '名無し').slice(0, 8);
+  const { key } = getCurrentZombieKey();
+  const today = new Date();
+  const dateStr = `${today.getMonth()+1}/${today.getDate()}`;
+  const newComment = { name, text: text.slice(0, 200), date: dateStr, _ts: Date.now() };
+
+  if (firebaseDB) {
+    // Firebase版：pushで一意IDを自動付与
+    firebaseDB.ref('comments/' + key).push(newComment).catch(err => {
+      alert('投稿失敗: ' + err.message);
+    });
+    textEl.value = '';
+    // リアルタイムリスナーが自動でrenderComments呼ぶので明示呼び出し不要
+  } else {
+    // localStorage版
+    let comments = [];
+    try { comments = JSON.parse(localStorage.getItem('zcomments_' + key) || '[]'); } catch(e){}
+    comments.push(newComment);
+    localStorage.setItem('zcomments_' + key, JSON.stringify(comments));
+    textEl.value = '';
+    renderComments(comments);
+  }
+}
+
+function deleteComment(idOrIdx) {
+  if (!confirm('このコメントを削除しますか？')) return;
+  const { key } = getCurrentZombieKey();
+
+  if (firebaseDB && typeof idOrIdx === 'string') {
+    // Firebase版：idで削除
+    firebaseDB.ref('comments/' + key + '/' + idOrIdx).remove().catch(err => {
+      alert('削除失敗: ' + err.message);
+    });
+  } else {
+    // localStorage版：インデックスで削除
+    let comments = [];
+    try { comments = JSON.parse(localStorage.getItem('zcomments_' + key) || '[]'); } catch(e){}
+    comments.splice(idOrIdx, 1);
+    localStorage.setItem('zcomments_' + key, JSON.stringify(comments));
+    renderComments(comments);
+  }
+}
+
+function toggleAllComments() {
+  showingAllComments = !showingAllComments;
+  loadComments();
+}
+
+// ターゲット変更時にコメントも更新
+const origUpdateTargets = updateTargets;
+updateTargets = function() {
+  origUpdateTargets();
+  showingAllComments = false;
+  setTimeout(loadComments, 50);
+};
+const origRecalc = recalc;
+recalc = function() {
+  origRecalc();
+  loadComments();
+};
+
+// 初回ロード
+setTimeout(loadComments, 100);
+
+// Enterキーで投稿
+document.getElementById('commentText').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') addComment();
+});
+
+// Start
+init();
+</script>
+
+</body>
+</html>
