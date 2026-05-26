@@ -286,10 +286,10 @@
     </div>
     <div class="row">
       <div>
-        <label>🎮 ダメージ補正（オプション）</label>
+        <label>🎮 追加ダメージ倍率（必要な場合のみ）</label>
         <select id="difficulty">
-          <option value="1.0" selected>×1.0（補正なし／武器表示通り）</option>
-          <option value="1.5">×1.5（任意の追加倍率）</option>
+          <option value="1.0" selected>×1.0（補正なし・標準）</option>
+          <option value="1.5">×1.5</option>
           <option value="2.0">×2.0</option>
           <option value="0.7">×0.7</option>
           <option value="0.5">×0.5</option>
@@ -301,13 +301,13 @@
       </div>
     </div>
     <div class="info-box" style="font-size:0.78em;margin-top:6px;">
-      <b>📌 重要：</b>武器に表示される攻撃力（Q3 鉄鋼こん棒 40.2 等）は<b>既に難易度補正込み</b>の可能性が高いです。<br>
-      実測ベース：Q3=40.2 のこん棒で放射能ナース胴体13発→ HP約 451 がピッタリ（補正×1.0）。<br>
-      もし計算が実測と合わない場合のみ、ここを調整してください。
+      <b>📌 難易度について：</b>武器に表示されるダメージ（Q3鉄鋼こん棒=40.2など）は<b>そのまま実ダメージ</b>として計算します。<br>
+      ユーザー実機検証で、Adventurer設定でも表示通り40.2で計算するとピッタリ合うため、二重計算を避けています。<br>
+      もし手動で倍率を変えたい時だけ、ここで調整してください（基本は×1.0でOK）。
     </div>
     <div class="checkbox-row">
       <label><input type="checkbox" id="powerAttack"> パワーアタック</label>
-      <label><input type="checkbox" id="sneakAttack"> 奇襲攻撃</label>
+      <label title="しゃがみ状態で敵に気づかれていない時の攻撃ボーナス。ナイフ系+400%、弓系+200%、その他+50%。スリーパー狩りに有効"><input type="checkbox" id="sneakAttack"> 奇襲攻撃(しゃがみ・敵に未発見)</label>
       <label><input type="checkbox" id="downedBonus"> ダウン中の頭当たりやすさ補正(×1.5)</label>
       <label style="display:none;"><input type="checkbox" id="modBonus"></label>
       <label style="display:none;"><input type="checkbox" id="perkBonus"></label>
@@ -391,20 +391,6 @@
     </div>
     <div id="commentList"></div>
     <button id="toggleComments" onclick="toggleAllComments()" style="display:none;margin-top:6px;background:#2a3050;color:#ffa500;border:1px solid #ff6b35;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.85em;">▼ 全て表示</button>
-  </div>
-
-  <div class="panel gift-builder">
-    <h2>🎁 ギフト表ビルダー（妨害配信用）</h2>
-    <div class="row">
-      <button class="btn btn-purple" onclick="addCurrentToGift()">現在の武器をギフトに追加</button>
-      <button class="btn btn-purple" onclick="addCurrentTargetToGift()">現在のターゲットをギフトに追加</button>
-    </div>
-    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">武器ギフト候補</h3>
-    <div id="weaponGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
-    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">ターゲットギフト候補</h3>
-    <div id="targetGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
-    <button class="btn" onclick="exportGiftTable()" style="margin-top:12px;">📋 Discord貼り付け用テキストを出力</button>
-    <textarea id="exportArea" style="display:none;width:100%;height:200px;margin-top:10px;background:#1a1a2e;color:#eee;padding:8px;border:1px solid #3a4070;border-radius:5px;font-family:monospace;font-size:0.85em;"></textarea>
   </div>
 
   <details class="panel">
@@ -554,13 +540,108 @@
       実際には中央値付近に収まることが多いですが、運が悪いと最多発数になることもアリ⚠️
     </div>
 
+    <!-- 難易度倍率 -->
+    <div style="margin-top:20px;">
+      <h3 style="color:#ffa500;margin:0 0 8px;font-size:1.05em;border-bottom:1px solid #3a4070;padding-bottom:6px;">🎮 難易度別ダメージ倍率（公式仕様）</h3>
+      <table class="result-table" style="font-size:0.85em;">
+        <thead>
+          <tr><th>レベル</th><th>名称</th><th>被ダメ%</th><th>与ダメ%</th><th>備考</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>Scavenger 狩猟人</td><td>50%</td><td>200%</td><td>最易・初心者向け</td></tr>
+          <tr><td>1</td><td>Adventurer 冒険者</td><td>75%</td><td>150%</td><td>易</td></tr>
+          <tr><td>2</td><td>Nomad 遊牧民</td><td>100%</td><td>100%</td><td>標準・デフォルト</td></tr>
+          <tr><td>3</td><td>Warrior 戦士</td><td>150%</td><td>83%</td><td>難</td></tr>
+          <tr><td>4</td><td>Survivalist 生存者</td><td>200%</td><td>66%</td><td>かなり難</td></tr>
+          <tr><td>5</td><td>Insane 狂気</td><td>250%</td><td>50%</td><td>最難</td></tr>
+        </tbody>
+      </table>
+      <div style="font-size:0.78em;color:#ccc;margin-top:8px;line-height:1.6;">
+        <b style="color:#ffa500;">⚠️ 注意：</b>「与ダメ%」は理論値ですが、<b>V2.xの実機テストでは武器表示ダメージがそのまま実ダメージ</b>として通る挙動を確認。<br>
+        Adventurerの+50%が「表示値に既に反映済み」or「与ダメには無効化」のいずれかと推定されます。<br>
+        計算機では<b>武器表示値をそのまま使用</b>します（実測と合うため）。
+      </div>
+    </div>
+
+    <!-- ヘッドショット倍率 -->
+    <div style="margin-top:20px;">
+      <h3 style="color:#ffa500;margin:0 0 8px;font-size:1.05em;border-bottom:1px solid #3a4070;padding-bottom:6px;">🎯 ヘッドショット倍率（武器別）</h3>
+      <table class="result-table" style="font-size:0.85em;">
+        <thead>
+          <tr><th>武器カテゴリ</th><th>HS倍率/加算</th><th>難易度依存</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>近接全般（棍棒/スレッジ/ナックル/バトン等）</td><td>×1.5〜2.0倍</td><td>なし（武器別の固定倍率）</td></tr>
+          <tr><td>ブレード（ナイフ/マチェーテ）</td><td>×2.0倍</td><td>なし</td></tr>
+          <tr><td>ハンドガン</td><td>×1.5倍</td><td>なし</td></tr>
+          <tr><td>マシンガン系</td><td>×1.5倍</td><td>なし</td></tr>
+          <tr><td>パイプライフル</td><td>+25 ダメ加算</td><td>なし</td></tr>
+          <tr><td>狩猟ライフル</td><td>+50 ダメ加算</td><td>なし</td></tr>
+          <tr><td>レバーアクション</td><td>+100 ダメ加算</td><td>なし</td></tr>
+          <tr><td>スナイパーライフル</td><td>+200 ダメ加算</td><td>なし</td></tr>
+          <tr><td>弓・クロスボウ</td><td>×2.0倍</td><td>なし</td></tr>
+        </tbody>
+      </table>
+      <div style="font-size:0.78em;color:#ccc;margin-top:8px;line-height:1.6;">
+        <b style="color:#ffa500;">📌 ライフル系は「倍率」じゃなく「加算ボーナス」：</b><br>
+        通常HSは ×1.5〜2.0 の倍率方式だけど、ライフル系だけ <b>「+200ダメ加算」</b> のような独自仕様。<br>
+        例：スナイパー（基礎100）でHS → 100 + 200 = 300ダメ。<br>
+        パーク「貫通者」「射撃の名手」でさらに上昇可能。
+      </div>
+    </div>
+
+    <!-- 奇襲攻撃 -->
+    <div style="margin-top:20px;">
+      <h3 style="color:#ffa500;margin:0 0 8px;font-size:1.05em;border-bottom:1px solid #3a4070;padding-bottom:6px;">🤫 奇襲攻撃（Sneak Attack）の仕様</h3>
+      <div style="font-size:0.88em;color:#ddd;line-height:1.7;">
+        <b>奇襲攻撃とは：</b>しゃがみ状態で敵に気づかれていない時に攻撃すると発生する追加ダメージボーナス。<br>
+        スリーパー（眠っているゾンビ）や、警戒していない敵に対して有効。<br><br>
+
+        <b>武器別の奇襲ボーナス（XMLで確認済み）：</b>
+        <table class="result-table" style="font-size:0.85em;margin-top:6px;">
+          <thead>
+            <tr><th>武器カテゴリ</th><th>奇襲ボーナス</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>一般近接（棍棒/スレッジ等）</td><td>+50% (×1.5)</td></tr>
+            <tr><td>ブレード系（ナイフ/マチェーテ）</td><td><b>+400% (×5.0)</b></td></tr>
+            <tr><td>弓・クロスボウ</td><td><b>+200% (×3.0)</b></td></tr>
+            <tr><td>その他遠距離</td><td>+50%</td></tr>
+          </tbody>
+        </table>
+        <br>
+        <b style="color:#ffa500;">💡 ステルスビルドの強さ：</b><br>
+        ・パーク「ヒドゥンストライク」で奇襲ダメさらに上昇<br>
+        ・しゃがみ + マチェーテ/弓で<b>スリーパーを一撃必殺</b>できる<br>
+        ・パイプ爆弾を遠投で誘発も奇襲扱い<br>
+        ・気づかれた瞬間に奇襲ボーナス消失
+      </div>
+    </div>
+
     <!-- データソース -->
-    <div style="font-size:0.78em;color:#888;margin-top:10px;padding:6px 10px;background:rgba(20,25,40,0.4);border-radius:5px;">
-      📚 <b>出典：</b> 7d2d ゲーム内XMLファイル <code style="color:#ffa500;">Data/Config/items.xml</code> および <code style="color:#ffa500;">entityclasses.xml</code><br>
+    <div style="font-size:0.78em;color:#888;margin-top:20px;padding:6px 10px;background:rgba(20,25,40,0.4);border-radius:5px;">
+      📚 <b>出典：</b><br>
+      ・武器・ゾンビ：7d2d ゲーム内XML <code style="color:#ffa500;">Data/Config/items.xml</code> + <code style="color:#ffa500;">entityclasses.xml</code><br>
+      ・難易度倍率：<a href="https://7daystodie.fandom.com/wiki/Difficulty" target="_blank" style="color:#4dd2ff;">7 Days to Die Wiki (Fandom) - Difficulty</a><br>
+      ・奇襲・HS仕様：items.xml内の <code>sneakBonus</code>・<code>hsMult</code> 値より<br>
       Steam版なら <code>steamapps\common\7 Days To Die\Data\Config\</code> で実物確認可能
     </div>
 
   </details>
+
+  <div class="panel gift-builder">
+    <h2>🎁 ギフト表ビルダー（妨害配信用）</h2>
+    <div class="row">
+      <button class="btn btn-purple" onclick="addCurrentToGift()">現在の武器をギフトに追加</button>
+      <button class="btn btn-purple" onclick="addCurrentTargetToGift()">現在のターゲットをギフトに追加</button>
+    </div>
+    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">武器ギフト候補</h3>
+    <div id="weaponGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
+    <h3 style="margin:12px 0 4px;font-size:0.9em;color:#c870ff;">ターゲットギフト候補</h3>
+    <div id="targetGiftList" class="gift-list"><div class="empty-msg">未追加</div></div>
+    <button class="btn" onclick="exportGiftTable()" style="margin-top:12px;">📋 Discord貼り付け用テキストを出力</button>
+    <textarea id="exportArea" style="display:none;width:100%;height:200px;margin-top:10px;background:#1a1a2e;color:#eee;padding:8px;border:1px solid #3a4070;border-radius:5px;font-family:monospace;font-size:0.85em;"></textarea>
+  </div>
 
   <details class="panel">
     <summary><b>📖 データ参考 / 計算詳細</b></summary>
