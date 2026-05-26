@@ -473,6 +473,96 @@
   </details>
 
   <details class="panel">
+    <summary style="cursor:pointer;list-style:none;">
+      <h2 style="margin:0;display:inline-block;width:calc(100% + 18px);">📐 武器ダメージ計算式（仕様メモ） <span class="sub">▼ クリックで開閉</span></h2>
+    </summary>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
+
+      <!-- 左：武器の計算式 -->
+      <div>
+        <h3 style="color:#ffa500;margin:0 0 8px;font-size:1.05em;border-bottom:1px solid #3a4070;padding-bottom:6px;">⚔️ 武器の品質Q1〜Q6 計算式</h3>
+
+        <div style="background:rgba(20,25,40,0.6);padding:10px;border-radius:5px;font-family:monospace;font-size:0.85em;color:#bdf;margin-bottom:10px;">
+表示ダメージ = 基礎値 × (1 + 品質ボーナス) × (1 ± 0.15ランダム)
+        </div>
+
+        <table class="result-table" style="font-size:0.85em;">
+          <thead>
+            <tr><th>品質</th><th>ボーナス</th><th>鉄鋼こん棒(基礎32.5)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Q1</td><td>+0%</td><td>32.5</td></tr>
+            <tr><td>Q2</td><td>+10%</td><td>35.75</td></tr>
+            <tr><td>Q3</td><td>+20%</td><td>39.0</td></tr>
+            <tr><td>Q4</td><td>+30%</td><td>42.25</td></tr>
+            <tr><td>Q5</td><td>+40%</td><td>45.5</td></tr>
+            <tr><td>Q6</td><td>+50%</td><td>48.75</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-size:0.8em;color:#ccc;margin-top:10px;line-height:1.6;">
+          <b style="color:#ffa500;">📌 ±15%個体差ロールについて：</b><br>
+          武器はクラフト時に <b>-15%〜+15%</b> のランダム補正がかかり、その値で固定されます。<br><br>
+          <b>例：Q3鉄鋼こん棒</b><br>
+          ・中央値：32.5 × 1.20 = <b>39.0</b><br>
+          ・実機(+3%ロール)：<b>40.2</b><br>
+          ・最低(-15%)：33.15 / 最高(+15%)：44.85<br><br>
+          → 同じQ3でも個体差で<b>10ダメ近く違う</b>ことがある
+        </div>
+      </div>
+
+      <!-- 右：ゾンビの個体差 -->
+      <div>
+        <h3 style="color:#ffa500;margin:0 0 8px;font-size:1.05em;border-bottom:1px solid #3a4070;padding-bottom:6px;">🧟 ゾンビHP ±15%個体差</h3>
+
+        <div style="background:rgba(20,25,40,0.6);padding:10px;border-radius:5px;font-family:monospace;font-size:0.85em;color:#bdf;margin-bottom:10px;">
+実HP = 基礎HP × (1 ± 0.15ランダム)
+        </div>
+
+        <table class="result-table" style="font-size:0.85em;">
+          <thead>
+            <tr><th>ゾンビ</th><th>基礎HP</th><th>変動レンジ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>arlene 通常</td><td>125</td><td>106〜144</td></tr>
+            <tr><td>arlene 放射能</td><td>451</td><td>383〜519</td></tr>
+            <tr><td>mutated 放射能</td><td>552</td><td>469〜635</td></tr>
+            <tr><td>biker 放射能</td><td>1010</td><td>859〜1162</td></tr>
+            <tr><td>wight 放射能</td><td>1010</td><td>859〜1162</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-size:0.8em;color:#ccc;margin-top:10px;line-height:1.6;">
+          <b style="color:#ffa500;">📌 出現時に確定するランダム：</b><br>
+          ゾンビは出現するたびにHPがランダムで決まり、その個体は死ぬまでそのHP。<br><br>
+          <b>例：放射能アーリーン (451 HP)</b><br>
+          ・弱い個体：383 HP（8発で死ぬかも）<br>
+          ・標準個体：451 HP（10発くらい）<br>
+          ・強い個体：519 HP（13発くらいかかる）<br><br>
+          → 同じ「放射能アーリーン」でも数発のブレが出る
+        </div>
+      </div>
+    </div>
+
+    <!-- 下部：合成のレンジ計算 -->
+    <div class="info-box" style="margin-top:14px;background:rgba(255,165,0,0.08);">
+      <b style="color:#ffa500;">🔢 計算機の「○〜○発」レンジの正体：</b><br><br>
+      この計算機は <b>武器個体差(±15%) × ゾンビHP個体差(±15%)</b> を両方考慮して、最少〜最多の発数を出しています。<br><br>
+      <b>最少発数</b> = HP最低値 ÷ ダメージ最高値（弱い敵 × 強い武器のラッキー）<br>
+      <b>最多発数</b> = HP最高値 ÷ ダメージ最低値（強い敵 × 弱い武器の不運）<br><br>
+      実際には中央値付近に収まることが多いですが、運が悪いと最多発数になることもアリ⚠️
+    </div>
+
+    <!-- データソース -->
+    <div style="font-size:0.78em;color:#888;margin-top:10px;padding:6px 10px;background:rgba(20,25,40,0.4);border-radius:5px;">
+      📚 <b>出典：</b> 7d2d ゲーム内XMLファイル <code style="color:#ffa500;">Data/Config/items.xml</code> および <code style="color:#ffa500;">entityclasses.xml</code><br>
+      Steam版なら <code>steamapps\common\7 Days To Die\Data\Config\</code> で実物確認可能
+    </div>
+
+  </details>
+
+  <details class="panel">
     <summary><b>📖 データ参考 / 計算詳細</b></summary>
     <div style="margin-top:10px;font-size:0.85em;color:#ccc;line-height:1.6;">
       <b>武器特殊効果：</b><br>
