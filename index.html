@@ -313,6 +313,13 @@
       <label style="display:none;"><input type="checkbox" id="perkBonus"></label>
       <label style="display:none;"><input type="number" id="qualityBonus" value="0"></label>
     </div>
+    <div class="info-box" style="font-size:0.78em;margin-top:6px;background:rgba(100,200,255,0.08);border-left:3px solid #4dd2ff;">
+      <b style="color:#4dd2ff;">💡 奇襲攻撃チェックの活用法：</b><br>
+      ONにすると<b>「スリーパー（眠ってる/未発見ゾンビ）を1撃でキルできるか」</b>がパッと判定できます！<br>
+      ・ナイフ系 +400%（×5倍）／弓系 +200%（×3倍）／その他 +50%（×1.5倍）<br>
+      ・例：複合クロスボウ+鉄鋼ボルト+奇襲 → 放射能ゾンビの頭にスニークHSで一撃即死を狙える<br>
+      ・POI攻略のステルスビルド検討に便利
+    </div>
     <div id="weaponInfo" class="info-box"></div>
     <div class="info-box" style="margin-top:8px;">
       <b>🎯 命中部位の違い：</b><br>
@@ -1013,9 +1020,11 @@ function calcDamagePerHit(w, ammo) {
     dmg *= parseFloat(loc);
   }
 
-  // 奇襲
-  if (document.getElementById('sneakAttack').checked && w.sneakBonus) {
-    dmg *= (1 + w.sneakBonus);
+  // 奇襲攻撃（しゃがみ + 敵未発見時）
+  // ナイフ系 +400%、弓系 +200%、その他は +50% がデフォルト
+  if (document.getElementById('sneakAttack').checked) {
+    const sneakMult = (w.sneakBonus !== undefined) ? w.sneakBonus : 0.5;
+    dmg *= (1 + sneakMult);
   }
 
   // 強化合計（品質+MOD+技能の総ボーナス）
